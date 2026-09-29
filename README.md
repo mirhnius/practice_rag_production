@@ -8,6 +8,12 @@ instead of running someone else's notebook cells.
 
 ## How this is organized
 
+- **`docs/`** — one guide per week (`week1.md` ... `week7.md`). This is
+  where the actual teaching lives: what the concept is and why it works
+  the way it does, then a file-by-file walkthrough of the approach for
+  everything you'll implement that week. Read the guide *before* opening
+  any code — the TODO comments in `src/` are short reminders, not the
+  explanation.
 - **`src/`** — the actual application, laid out the same way a real
   production RAG service would be (routers / services / repositories /
   models), growing by one or two modules each week. Every file starts
@@ -16,13 +22,15 @@ instead of running someone else's notebook cells.
   finished body.
 - **`scripts/`** — one plain script per week (`week1_verify_infra.py`,
   `week2_test_arxiv_pipeline.py`, ...). These replace the course's
-  Jupyter notebooks: same step-by-step flow, but a normal `.py` file you
-  run with `uv run python scripts/weekN_....py`. Each script calls into
-  the `src/` modules for that week, so it will fail with
-  `NotImplementedError` until I've actually written the code — that's
-  the point, it's my checklist.
-- **`ROADMAP.md`** — the week-by-week checklist: what to implement, which
-  script proves it works, and where to read the concept explanation.
+  Jupyter notebooks: same step-by-step flow, printed section by section,
+  no helper framework of their own — every line is visible top to bottom,
+  the same way a notebook reads cell by cell. Each script calls straight
+  into the `src/` modules for that week, so it will raise
+  `NotImplementedError` — with a traceback pointing at the exact file and
+  line — until I've actually written the code. That's the point: it's my
+  checklist, not something to debug.
+- **`ROADMAP.md`** — the week-by-week index: which guide to read, which
+  files to implement, which script proves it works.
 
 ## Setup
 
@@ -46,13 +54,14 @@ service, the same way the course notebooks do when run outside Docker.
 ## Working through it
 
 1. Open [ROADMAP.md](ROADMAP.md) and pick the next unchecked week.
-2. Read that week's `README.md` / blog post in the course repo for the
-   *concept* (what BM25 is, what RRF fusion is, etc.) — this repo doesn't
-   re-explain the theory, only scaffolds the code.
-3. Implement the `# TODO`s in the files listed for that week.
-4. Run that week's script in `scripts/`. When it stops raising
-   `NotImplementedError` and prints success, move on.
-5. If you get properly stuck, the finished reference implementation is
+2. Read that week's guide in `docs/` — the concept, then the plan for
+   every file you're about to touch.
+3. Implement the `# TODO`s in the files it lists.
+4. Run that week's script in `scripts/`. When it runs to the end without
+   a `NotImplementedError` traceback, move on.
+5. If you get properly stuck on a specific function, the course's own
+   `README.md`/notebook for that week (linked at the bottom of each
+   guide) has more context, and the finished reference implementation is
    sitting right next to this repo at
    `../production-agentic-rag-course/src/...` — try for real first, then
    peek only at the one function you're stuck on.
@@ -60,6 +69,7 @@ service, the same way the course notebooks do when run outside Docker.
 ## Layout
 
 ```
+docs/                        # week1.md ... week7.md — read these first
 src/
 ├── config.py                 # Week 1 — settings from .env
 ├── main.py                   # Week 1 — FastAPI app, wires up routers

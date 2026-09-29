@@ -1,9 +1,14 @@
 """
 Week 3 — OpenSearch keyword (BM25) search.
 
-Notebook replacement for `notebooks/week3/week3_opensearch.ipynb`.
-Complete harness — indexes whatever papers you already stored in Week 2,
-then runs BM25 searches against them.
+Read docs/week3.md first. This is the notebook replacement for
+notebooks/week3/week3_opensearch.ipynb — a plain, top-to-bottom script,
+already complete (nothing to implement here; it's your checking
+harness).
+
+If a step below isn't implemented yet, Python will raise
+NotImplementedError and the script will stop right there — read the
+traceback, it names the exact file and line to go work on next.
 
     uv run python scripts/week3_test_search.py
 
@@ -18,7 +23,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import requests  # noqa: E402
 
-from scripts._util import run_step  # noqa: E402
 from src.config import get_settings  # noqa: E402
 from src.db.session import get_session  # noqa: E402
 from src.repositories.paper import PaperRepository  # noqa: E402
@@ -26,84 +30,94 @@ from src.services.opensearch.client import OpenSearchClient  # noqa: E402
 
 
 def main() -> None:
-    print("=== Week 3: OpenSearch keyword search ===")
     settings = get_settings()
     client = OpenSearchClient(settings.opensearch_host, settings.opensearch_index_name)
 
-    healthy = run_step(
-        "OpenSearch health check",
-        "src/services/opensearch/client.py (health_check)",
-        client.health_check,
-    )
+    print("=" * 60)
+    print("STEP 1 — OpenSearch health check")
+    print("=" * 60)
+    healthy = client.health_check()
+    print("OK" if healthy else "NOT healthy — is `docker compose up -d` running?")
     if not healthy:
-        print("\nStopping here — start OpenSearch before continuing.")
         return
 
-    run_step(
-        "Create the arxiv-papers index",
-        "src/services/opensearch/client.py (create_index_if_missing)",
-        client.create_index_if_missing,
-    )
+    print()
+    print("=" * 60)
+    print("STEP 2 — create the arxiv-papers index (no-op if it already exists)")
+    print("=" * 60)
+    created = client.create_index_if_missing()
+    print("Created a new index." if created else "Index already existed.")
 
+    print()
+    print("=" * 60)
+    print("STEP 3 — index every paper you stored in Postgres during Week 2")
+    print("=" * 60)
     with get_session() as session:
         papers = PaperRepository(session).list_papers(limit=50)
 
     if not papers:
-        print("\nNo papers in Postgres yet — run scripts/week2_test_arxiv_pipeline.py first.")
+        print("No papers in Postgres yet — run scripts/week2_test_arxiv_pipeline.py first.")
         return
 
-    def _index_all():
-        for paper in papers:
-            client.index_paper(
-                {
-                    "arxiv_id": paper.arxiv_id,
-                    "title": paper.title,
-                    "abstract": paper.abstract,
-                    "authors": paper.authors,
-                    "categories": paper.categories,
-                    "published_date": paper.published_date.isoformat(),
-                    "pdf_url": paper.pdf_url,
-                }
-            )
-        return len(papers)
+    for paper in papers:
+        client.index_paper(
+            {
+                "arxiv_id": paper.arxiv_id,
+                "title": paper.title,
+                "abstract": paper.abstract,
+                "authors": paper.authors,
+                "categories": paper.categories,
+                "published_date": paper.published_date.isoformat(),
+                "pdf_url": paper.pdf_url,
+            }
+        )
+    print(f"Indexed {len(papers)} paper(s).")
 
-    indexed = run_step(
-        f"Index {len(papers)} paper(s) from Postgres into OpenSearch",
-        "src/services/opensearch/client.py (index_paper)",
-        _index_all,
-    )
-    if not indexed:
-        return
+    print()
+    print("=" * 60)
+    print("STEP 4 — search for 'learning'")
+    print("=" * 60)
+    results = client.search("learning", size=5)
+    print(f"{results.get('total', 0)} total match(es)")
+    for hit in results.get("hits", []):
+        print(f"  - {hit.get('title', '')[:70]}  (score={hit.get('score')})")
 
-    results = run_step(
-        "Search for 'learning'",
-        "src/services/opensearch/query_builder.py + client.py (search)",
-        lambda: client.search("learning", size=5),
-    )
-    if results:
-        print(f"    {results.get('total', 0)} total matches")
-        for hit in results.get("hits", []):
-            print(f"    - {hit.get('title', '')[:70]} (score={hit.get('score')})")
+    print()
+    print("=" * 60)
+    print("STEP 5 — search for 'neural', filtered to category cs.AI")
+    print("=" * 60)
+    filtered = client.search("neural", categories=["cs.AI"], size=5)
+    print(f"{filtered.get('total', 0)} total match(es)")
+    for hit in filtered.get("hits", []):
+        print(f"  - {hit.get('title', '')[:70]}  (score={hit.get('score')})")
 
-    run_step(
-        "Search with a category filter (cs.AI)",
-        "src/services/opensearch/query_builder.py (build_filtered_query)",
-        lambda: client.search("neural", categories=["cs.AI"], size=5),
-    )
-
-    # Best-effort: also hit your own API if it happens to be running.
+    print()
+    print("=" * 60)
+    print("BONUS — hit your own HTTP endpoint, if it's running")
+    print("=" * 60)
     port = settings.app_port
     try:
         response = requests.get(
             f"http://localhost:{port}/api/v1/search", params={"q": "learning"}, timeout=5
         )
-        print(f"\n[OK] GET /api/v1/search on your own app -> {response.status_code}")
+        print(f"GET /api/v1/search -> {response.status_code}")
     except requests.exceptions.RequestException:
         print(
-            f"\n[SKIP] Your app isn't running on port {port}. Start it with "
-            f"`uv run uvicorn src.main:app --reload --port {port}` to test the HTTP endpoint too."
+            f"Skipped — your app isn't running on port {port}. Start it with "
+            f"`uv run uvicorn src.main:app --reload --port {port}` to try this step."
         )
+
+    print("\nAll steps ran without errors — Week 3 is done.")
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except NotImplementedError:
+        import traceback
+
+        traceback.print_exc()
+        print(
+            "\nThat NotImplementedError is your next TODO — the traceback above "
+            "names the exact file and line. See docs/week3.md for the plan."
+        )

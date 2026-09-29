@@ -1,11 +1,11 @@
 """
 Week 1 — infrastructure verification.
 
-The notebook replacement for `notebooks/week1/week1_setup.ipynb`. This
-script is already complete — it's your checking harness, not something to
-implement. Run it any time to confirm the shared infra (started from the
-course repo's `docker compose up -d`) is reachable, and that your own
-FastAPI app boots.
+Read docs/week1.md first. This is the notebook replacement for
+notebooks/week1/week1_setup.ipynb — a plain script, already complete
+(nothing to implement here; it's your checking harness). Run it any time
+to confirm the shared infra (started from the course repo's
+`docker compose up -d`) is reachable, and that your own FastAPI app boots.
 
     uv run python scripts/week1_verify_infra.py
 """
