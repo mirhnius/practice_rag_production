@@ -13,8 +13,8 @@ traceback, it names the exact file and line to go work on next.
 
     uv run python scripts/week2_test_arxiv_pipeline.py
 
-Requires the shared infra running (`docker compose up -d` in the course
-repo) so Postgres is reachable.
+Requires the local infra running (`docker compose up -d` in this
+project's root) so Postgres is reachable.
 """
 
 import sys

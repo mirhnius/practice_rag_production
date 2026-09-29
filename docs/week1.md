@@ -7,7 +7,7 @@ like random instructions.
 ## What you're building this week
 
 Nothing "AI" yet — just the plumbing every later week depends on: your
-own FastAPI app, plus confirmation that the shared services (Postgres,
+own FastAPI app, plus confirmation that the local services (Postgres,
 OpenSearch, Ollama) are reachable. Getting this boring part solid now is
 what makes weeks 2-7 feel like adding one piece at a time instead of
 debugging infrastructure and RAG logic at once.
@@ -20,11 +20,16 @@ debugging infrastructure and RAG logic at once.
 | **PostgreSQL** | Stores paper metadata (Week 2+) | Docker, port 5432 |
 | **OpenSearch** | Search engine for BM25 + vectors (Week 3+) | Docker, port 9200 |
 | **Ollama** | Runs a local LLM (Week 5+) | Docker, port 11434 |
-| **Airflow** | Optional workflow scheduler | Docker, port 8080 |
+| **Redis** | Response caching (Week 6+) | Docker, port 6379 |
+| **Airflow** *(course repo only)* | Optional workflow scheduler | Docker, port 8080 |
 
-You don't build any of the Docker services — those come from the course
-repo's `docker compose up -d`. What you *do* build is the app that will
-eventually talk to all of them.
+You don't build any of the Docker services — Postgres/OpenSearch/Ollama/
+Redis come from this project's own `docker compose up -d` (see
+`compose.yml` at the repo root). Airflow isn't part of that file — it
+needs a custom-built image, and you only need it for the optional
+`examples/weather_etl_demo` step; start it from
+`../production-agentic-rag-course` instead if you want to try that. What
+you *do* build here is the app that talks to all of these.
 
 ## Files to implement
 
@@ -68,17 +73,12 @@ extend it then if you want; it's not required.
 ```bash
 uv sync
 cp .env.example .env
-```
-
-Start the shared infra from the course repo (only needs doing once per
-reboot):
-
-```bash
-cd ../production-agentic-rag-course
 docker compose up -d
 ```
 
-Then, in this repo, start your own app in one terminal:
+That last command starts Postgres/OpenSearch/Ollama/Redis right here
+(only needs doing once per reboot). Then start your own app in one
+terminal:
 
 ```bash
 uv run uvicorn src.main:app --reload --port 8100

@@ -1,0 +1,108 @@
+# Local infra for this project — self-contained, so you never need to
+# `cd` into the course repo for everyday Week 1-6 work. Same images,
+# ports, and credentials as
+# ../production-agentic-rag-course/compose.yml, so .env.example already
+# points at the right places without any changes.
+#
+#   docker compose up -d            # start everything
+#   docker compose up -d postgres   # start just one service (e.g. for Week 2)
+#   docker compose ps               # see what's running
+#   docker compose down             # stop everything (keeps your data)
+#
+# NOT included here, on purpose:
+# - Airflow needs a custom-built image (course repo's airflow/Dockerfile)
+#   and isn't required by this curriculum's src/ code — only the
+#   optional weather_etl_demo step touches Airflow, straight from the
+#   course repo's own compose.yml.
+# - Langfuse (Week 6, optional) is a 6-container stack of its own
+#   (web/worker/clickhouse/minio/redis/postgres). When you get to Week 6,
+#   either run it from the course repo, or use Langfuse's free hosted
+#   cloud (cloud.langfuse.com) instead of self-hosting — much lighter.
+#
+# Don't run this AND the course repo's compose.yml at the same time —
+# both claim the same ports (5432, 9200, 11434, ...).
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_DB=rag_db
+      - POSTGRES_USER=rag_user
+      - POSTGRES_PASSWORD=rag_password
+      - POSTGRES_HOST_AUTH_METHOD=password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_user -d rag_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  opensearch:
+    image: opensearchproject/opensearch:2.19.0
+    environment:
+      - discovery.type=single-node
+      - OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m
+      - DISABLE_SECURITY_PLUGIN=true
+      - bootstrap.memory_lock=true
+    ports:
+      - "9200:9200"
+      - "9600:9600"
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.19.0
+    ports:
+      - "5601:5601"
+    environment:
+      - OPENSEARCH_HOSTS=http://opensearch:9200
+      - DISABLE_SECURITY_DASHBOARDS_PLUGIN=true
+    depends_on:
+      - opensearch
+
+  ollama:
+    image: ollama/ollama:0.11.2
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  opensearch_data:
+  ollama_data:
+  redis_data:

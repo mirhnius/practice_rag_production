@@ -12,7 +12,7 @@ traceback, it names the exact file and line to go work on next.
 
     uv run python scripts/week3_test_search.py
 
-Requires OpenSearch running (`docker compose up -d` in the course repo)
+Requires OpenSearch running (`docker compose up -d` in this project's root)
 and at least one paper already stored in Postgres from Week 2.
 """
 

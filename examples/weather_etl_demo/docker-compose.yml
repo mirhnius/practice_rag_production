@@ -1,0 +1,37 @@
+# Standalone Postgres for this demo, plus Adminer (a one-container web
+# UI for browsing tables) — separate from the course's own Postgres, on
+# host port 5434 (not 5432 or 5433 — the course's main Postgres uses
+# 5432 and its Langfuse Postgres uses 5433, so this stays out of the way
+# of the whole course stack, not just the main database).
+#
+#   cd examples/weather_etl_demo
+#   docker compose up -d
+#
+# This is what makes pipeline.py and api.py runnable with zero
+# dependency on ../production-agentic-rag-course being up at all.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: weather-demo-postgres
+    environment:
+      POSTGRES_USER: weather_user
+      POSTGRES_PASSWORD: weather_password
+      POSTGRES_DB: weather_db
+    ports:
+      - "5434:5432"
+    volumes:
+      - weather_demo_data:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:latest
+    container_name: weather-demo-adminer
+    ports:
+      - "8090:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+    depends_on:
+      - postgres
+
+volumes:
+  weather_demo_data:

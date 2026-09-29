@@ -37,19 +37,15 @@ instead of running someone else's notebook cells.
 ```bash
 uv sync
 cp .env.example .env
-```
-
-This repo does **not** duplicate the course's Docker/Postgres/OpenSearch/
-Airflow/Redis setup — that's infrastructure config, not something worth
-retyping by hand. Start it from the course checkout instead:
-
-```bash
-cd ../production-agentic-rag-course
 docker compose up -d
 ```
 
-Then come back here — `.env` already points at `localhost` for every
-service, the same way the course notebooks do when run outside Docker.
+That last command starts this project's own local infra (Postgres,
+OpenSearch, Ollama, Redis — see `compose.yml`) right here, so you never
+need to `cd` into the course repo for everyday Week 1-6 work. `.env`
+already points at `localhost` with matching ports. Airflow and Langfuse
+stay in the course repo (`compose.yml` explains why) — you only need
+those for the optional `examples/weather_etl_demo` Airflow step.
 
 ## Working through it
 

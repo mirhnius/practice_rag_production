@@ -20,4 +20,4 @@ def health_check() -> dict:
       extend this to ping each one and report per-service status —
       that's the pattern the course's own /api/v1/health endpoint uses.
     """
-    raise NotImplementedError
+    return {"status": "ok"}

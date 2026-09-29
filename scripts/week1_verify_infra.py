@@ -4,16 +4,19 @@ Week 1 — infrastructure verification.
 Read docs/week1.md first. This is the notebook replacement for
 notebooks/week1/week1_setup.ipynb — a plain script, already complete
 (nothing to implement here; it's your checking harness). Run it any time
-to confirm the shared infra (started from the course repo's
-`docker compose up -d`) is reachable, and that your own FastAPI app boots.
+to confirm the local infra (`docker compose up -d`, right here in this
+project) is reachable, and that your own FastAPI app boots.
 
     uv run python scripts/week1_verify_infra.py
 """
 
 import socket
 import sys
+from pathlib import Path
 
-import requests
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+import requests  # noqa: E402
 
 CHECK_TIMEOUT = 5
 
@@ -68,19 +71,25 @@ def main() -> None:
     print("=== Week 1: infrastructure check ===\n")
     check_python_version()
 
-    print("\n-- Shared infra (from the course repo's docker compose) --")
+    print("\n-- Local infra (this project's own docker compose) --")
     check_tcp_port("PostgreSQL", "localhost", 5432)
     check_http("OpenSearch", "http://localhost:9200/_cluster/health")
     check_http("Ollama", "http://localhost:11434/api/version")
-    check_http("Airflow (optional)", "http://localhost:8080/health")
+
+    print("\n-- Course-repo-only, optional (not part of this project's compose) --")
+    check_http("Airflow", "http://localhost:8080/health")
+    print(
+        "      Airflow only matters if you're trying the optional "
+        "examples/weather_etl_demo Airflow step — start it from "
+        "../production-agentic-rag-course instead of here."
+    )
 
     print("\n-- Your own app --")
     check_own_app()
 
     print(
-        "\nIf anything failed above: start the shared infra with "
-        "`docker compose up -d` from the course repo, wait a minute or two, "
-        "and re-run this script."
+        "\nIf anything in the first section failed: run `docker compose up -d` "
+        "in this project's root, wait a minute or two, and re-run this script."
     )
 
 
