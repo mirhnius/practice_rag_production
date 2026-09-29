@@ -11,9 +11,8 @@
 #
 # NOT included here, on purpose:
 # - Airflow needs a custom-built image (course repo's airflow/Dockerfile)
-#   and isn't required by this curriculum's src/ code — only the
-#   optional weather_etl_demo step touches Airflow, straight from the
-#   course repo's own compose.yml.
+#   and isn't required by this curriculum's src/ code — run it straight
+#   from the course repo's own compose.yml if you ever want it.
 # - Langfuse (Week 6, optional) is a 6-container stack of its own
 #   (web/worker/clickhouse/minio/redis/postgres). When you get to Week 6,
 #   either run it from the course repo, or use Langfuse's free hosted

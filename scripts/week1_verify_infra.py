@@ -76,14 +76,6 @@ def main() -> None:
     check_http("OpenSearch", "http://localhost:9200/_cluster/health")
     check_http("Ollama", "http://localhost:11434/api/version")
 
-    print("\n-- Course-repo-only, optional (not part of this project's compose) --")
-    check_http("Airflow", "http://localhost:8080/health")
-    print(
-        "      Airflow only matters if you're trying the optional "
-        "examples/weather_etl_demo Airflow step — start it from "
-        "../production-agentic-rag-course instead of here."
-    )
-
     print("\n-- Your own app --")
     check_own_app()
 

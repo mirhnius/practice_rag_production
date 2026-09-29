@@ -26,10 +26,10 @@ debugging infrastructure and RAG logic at once.
 You don't build any of the Docker services — Postgres/OpenSearch/Ollama/
 Redis come from this project's own `docker compose up -d` (see
 `compose.yml` at the repo root). Airflow isn't part of that file — it
-needs a custom-built image, and you only need it for the optional
-`examples/weather_etl_demo` step; start it from
-`../production-agentic-rag-course` instead if you want to try that. What
-you *do* build here is the app that talks to all of these.
+needs a custom-built image and isn't required by this curriculum; if you
+ever want to poke at it, start it from
+`../production-agentic-rag-course` instead. What you *do* build here is
+the app that talks to all of these.
 
 ## Files to implement
 

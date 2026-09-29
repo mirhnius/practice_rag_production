@@ -10,3 +10,6 @@ data/arxiv_pdfs/*
 !data/arxiv_pdfs/.gitkeep
 *.egg-info/
 .DS_Store
+
+# side demos / your own scratch experiments — local only, never committed
+examples/
