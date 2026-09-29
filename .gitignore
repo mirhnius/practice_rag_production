@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+.env.test
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+data/arxiv_pdfs/*
+!data/arxiv_pdfs/.gitkeep
+*.egg-info/
+.DS_Store

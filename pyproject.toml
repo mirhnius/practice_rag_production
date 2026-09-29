@@ -1,0 +1,55 @@
+[project]
+name = "practice-rag-production"
+version = "0.1.0"
+description = "My own from-scratch build of a production RAG system, following the arXiv Paper Curator course week by week — plain Python, no notebooks."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    # --- Week 1: API + config ---
+    "fastapi[standard]>=0.115.12",
+    "uvicorn>=0.34.0",
+    "pydantic>=2.11.3",
+    "pydantic-settings>=2.8.1",
+    "requests>=2.32.3",
+
+    # --- Week 2: database + arXiv ingestion + PDF parsing ---
+    "sqlalchemy>=2.0.0",
+    "psycopg2-binary>=2.9.10",
+    "python-dateutil>=2.9.0.post0",
+    "docling>=2.43.0",
+
+    # --- Week 3: OpenSearch / BM25 ---
+    "opensearch-py>=3.0.0",
+
+    # --- Week 4: chunking + embeddings ---
+    # (Jina is called over plain HTTP via `requests`, no extra SDK needed)
+
+    # --- Week 5: local LLM + UI ---
+    "gradio>=4.0.0",
+
+    # --- Week 6: caching + observability ---
+    "redis>=6.4.0",
+    "langfuse>=3.0.0",
+
+    # --- Week 7: agentic RAG + Telegram bot ---
+    "langgraph>=0.2.0",
+    "langchain-core>=0.3.0",
+    "langchain-ollama>=0.3.0",
+    "python-telegram-bot>=21.0,<22.0",
+]
+readme = "README.md"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.5",
+    "pytest-mock>=3.14.0",
+    "ruff>=0.11.5",
+    "mypy>=1.15.0",
+]
+
+[tool.ruff]
+line-length = 130
+src = ["src", "scripts"]
+lint.select = ["I"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
