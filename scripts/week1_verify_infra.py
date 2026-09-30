@@ -1,11 +1,12 @@
 """
 Week 1 — infrastructure verification.
 
-Read docs/week1.md first. This is the notebook replacement for
-notebooks/week1/week1_setup.ipynb — a plain script, already complete
-(nothing to implement here; it's your checking harness). Run it any time
-to confirm the local infra (`docker compose up -d`, right here in this
-project) is reachable, and that your own FastAPI app boots.
+Read docs/week1.md first. The connectivity checks below are already
+complete (nothing to implement there). The "hands-on exploration"
+section at the end is different — it calls the functions you write in
+src/services/exploration.py, so it will raise NotImplementedError until
+you've filled those in. That's expected; the traceback tells you exactly
+which function to go write next.
 
     uv run python scripts/week1_verify_infra.py
 """
@@ -18,7 +19,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import requests  # noqa: E402
 
+from src.services.exploration import (  # noqa: E402
+    generate_test_response,
+    list_postgres_tables,
+    opensearch_cluster_health,
+    pull_ollama_model,
+)
+
 CHECK_TIMEOUT = 5
+OLLAMA_HOST = "http://localhost:11434"
+OPENSEARCH_HOST = "http://localhost:9200"
+POSTGRES_URL = "postgresql://rag_user:rag_password@localhost:5432/rag_db"
 
 
 def check_python_version() -> None:
@@ -76,6 +87,15 @@ def main() -> None:
     check_http("OpenSearch", "http://localhost:9200/_cluster/health")
     check_http("Ollama", "http://localhost:11434/api/version")
 
+    print("\n-- Airflow (runs from the course repo, not this project's compose.yml) --")
+    airflow_ok = check_http("Airflow", "http://localhost:8080/health")
+    if not airflow_ok:
+        print(
+            "      Not part of this project's own infra — start it with "
+            "`docker compose up -d` in ../production-agentic-rag-course "
+            "if you want to look at the real arxiv_paper_ingestion DAG."
+        )
+
     print("\n-- Your own app --")
     check_own_app()
 
@@ -85,5 +105,53 @@ def main() -> None:
     )
 
 
+def explore_services() -> None:
+    """Hands-on exploration, mirroring the course notebook's Week 1 cells.
+
+    Unlike everything above, this part calls your own code
+    (src/services/exploration.py) and will raise NotImplementedError
+    until you've written it.
+    """
+    print("\n" + "=" * 60)
+    print("STEP 1 — pull an Ollama model (this can take a couple of minutes)")
+    print("=" * 60)
+    pull_ollama_model(OLLAMA_HOST, "llama3.2:1b")
+    print("Pulled.")
+
+    print()
+    print("=" * 60)
+    print("STEP 2 — generate one test response and see how long it takes")
+    print("=" * 60)
+    answer = generate_test_response(
+        OLLAMA_HOST, "llama3.2:1b", "What is machine learning in one sentence?"
+    )
+    print(f"Response: {answer}")
+
+    print()
+    print("=" * 60)
+    print("STEP 3 — list tables currently in Postgres")
+    print("=" * 60)
+    tables = list_postgres_tables(POSTGRES_URL)
+    print(f"{len(tables)} table(s): {tables}" if tables else "No tables yet — expected before Week 2.")
+
+    print()
+    print("=" * 60)
+    print("STEP 4 — check OpenSearch's cluster health")
+    print("=" * 60)
+    health = opensearch_cluster_health(OPENSEARCH_HOST)
+    print(f"status: {health.get('status')}, nodes: {health.get('number_of_nodes')}")
+
+
 if __name__ == "__main__":
     main()
+
+    try:
+        explore_services()
+    except NotImplementedError:
+        import traceback
+
+        traceback.print_exc()
+        print(
+            "\nThat NotImplementedError is your next TODO — the traceback above "
+            "names the exact file and line. See docs/week1.md for the plan."
+        )

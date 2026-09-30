@@ -44,8 +44,13 @@ That last command starts this project's own local infra (Postgres,
 OpenSearch, Ollama, Redis — see `compose.yml`) right here, so you never
 need to `cd` into the course repo for everyday Week 1-6 work. `.env`
 already points at `localhost` with matching ports. Airflow and Langfuse
-aren't part of this curriculum, so they're not included — see
-`compose.yml`'s comments if you're curious why.
+are still very much part of the real course (Airflow runs the actual
+`arxiv_paper_ingestion` DAG) — they're just not in *this project's own*
+compose.yml, because Airflow needs a custom-built image and Langfuse is
+a 6-container stack of its own (`compose.yml`'s comments explain both).
+Run them straight from `../production-agentic-rag-course` whenever you
+want to look at them; `scripts/week1_verify_infra.py` checks for Airflow
+too, it just doesn't require it.
 
 ## Working through it
 

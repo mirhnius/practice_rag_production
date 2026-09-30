@@ -7,7 +7,8 @@ live, not just a checklist. This file is only the index.
 ## Week 1 — Infrastructure Foundation
 
 - [ ] **Read:** [docs/week1.md](docs/week1.md)
-- [ ] **Implement:** [`src/routers/health.py`](src/routers/health.py)
+- [ ] **Implement:** [`src/routers/health.py`](src/routers/health.py),
+      [`src/services/exploration.py`](src/services/exploration.py) (optional hands-on exploration)
 - [ ] **Run:** `uv run python scripts/week1_verify_infra.py`
 
 ## Week 2 — Data Ingestion Pipeline
