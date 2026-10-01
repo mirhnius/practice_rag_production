@@ -29,9 +29,12 @@ class Settings(BaseSettings):
     environment: str = "development"
     app_port: int = 8100
 
-    # TODO (Week 2): postgres_database_url: str
-    #   arxiv_base_url: str, arxiv_search_category: str, arxiv_max_results: int,
-    #   arxiv_rate_limit_delay: float, arxiv_pdf_cache_dir: str
+    arxiv_base_url: str
+    postgres_database_url: str
+    arxiv_search_category: str
+    arxiv_max_results: int
+    arxiv_rate_limit_delay: float
+    arxiv_pdf_cache_dir: str
 
     # TODO (Week 3): opensearch_host: str, opensearch_index_name: str
 

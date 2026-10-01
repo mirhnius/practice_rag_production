@@ -28,8 +28,11 @@ def pull_ollama_model(host: str, model: str) -> None:
       few GB) — use a generous timeout (e.g. timeout=600)
     - response.raise_for_status() and print something so you know it worked
     - Reference: https://github.com/ollama/ollama/blob/main/docs/api.md#pull-a-model
-    """
-    raise NotImplementedError
+  """
+    url = f"{host.rstrip('/')}/api/pull"
+    response = requests.post(url, json={"name": model, "stream": False}, timeout=600)
+    response.raise_for_status()
+    print(f"Ollama model {model} pulled successfully.")
 
 
 def generate_test_response(host: str, model: str, prompt: str) -> str:
@@ -46,8 +49,11 @@ def generate_test_response(host: str, model: str, prompt: str) -> str:
       but takes 90 seconds for one sentence is a real problem you want
       to know about now, not while debugging Week 5's RAG pipeline
     """
-    raise NotImplementedError
-
+    url = f"{host.rstrip('/')}/api/generate"
+    response = requests.post(url, json={"model": model, "prompt": prompt, "stream": False}, timeout=180)
+    response.raise_for_status()
+    print(f"Generation took {response.elapsed.total_seconds()} seconds.")
+    return response.json()["response"]
 
 def list_postgres_tables(database_url: str) -> list[str]:
     """What tables already exist in the database right now?
@@ -65,7 +71,19 @@ def list_postgres_tables(database_url: str) -> list[str]:
     - return [row[0] for row in cursor.fetchall()]
     - remember to close the cursor and connection
     """
-    raise NotImplementedError
+    conn = psycopg2.connect(database_url)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT table_name "
+        "FROM information_schema.tables "
+        "WHERE table_schema='public' "
+        "ORDER BY table_name;"
+    )
+
+    tables = [row[0] for row in cursor.fetchall()]
+    cursor.close()
+    conn.close()
+    return tables
 
 
 def opensearch_cluster_health(host: str) -> dict:
@@ -79,4 +97,10 @@ def opensearch_cluster_health(host: str) -> dict:
     - the "status" field ("green"/"yellow"/"red") is the headline number;
       print it specifically, not just the whole dict
     """
-    raise NotImplementedError
+    
+    url = f"{host.rstrip('/')}/_cluster/health"
+    response = requests.get(url, timeout=20)
+    response.raise_for_status()
+    result = response.json()
+    print(f"Cluster status: {result['status']}")
+    return result

@@ -6,7 +6,7 @@ boring: one engine, one sessionmaker, one declarative Base, one
 context-managed helper to get a session.
 """
 
-from collections.abc import Iterator
+from collections.abc import Generator
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine
@@ -19,21 +19,20 @@ class Base(DeclarativeBase):
     pass
 
 
-# TODO: engine = create_engine(get_settings().postgres_database_url)
-engine = None  # TODO
+engine = create_engine(get_settings().postgres_database_url)
 
-# TODO: SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
-SessionLocal = None  # TODO
+SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
 
 
 @contextmanager
-def get_session() -> Iterator[Session]:
-    """Yield a SQLAlchemy session, committing on success, rolling back on error.
-
-    TODO:
-    - session = SessionLocal()
-    - try: yield session; session.commit()
-    - except Exception: session.rollback(); raise
-    - finally: session.close()
-    """
-    raise NotImplementedError
+def get_session() -> Generator[Session, None, None]:
+    """Yield a SQLAlchemy session, committing on success, rolling back on error."""
+    session = SessionLocal()
+    try:
+        yield session
+        session.commit()
+    except Exception:
+        session.rollback()
+        raise
+    finally:
+        session.close()
