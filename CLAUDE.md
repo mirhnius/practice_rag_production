@@ -8,16 +8,40 @@ A **learning scaffold**, not a working application. It's the user's own
 from-scratch build of the `production-agentic-rag-course` (arXiv Paper
 Curator, a 7-week RAG course) — deliberately written as plain Python
 instead of that course's Jupyter notebooks, with the source laid out as
-a real production FastAPI app. This project has its own local infra
-(`compose.yml`: Postgres/OpenSearch/Ollama/Redis, same images/ports/
-credentials as the course) so it's self-contained for everyday work.
-The sibling checkout `../production-agentic-rag-course` still holds the
-original notebooks and the course's own finished reference
-implementation, and is only needed live for two things: Airflow (a
-custom-built image, not replicated here) and Langfuse (Week 6, a
-6-container stack of its own) — both explained in `compose.yml`'s
-comments. Never run this project's `docker compose up -d` and the course
-repo's at the same time; they claim the same host ports.
+a real production FastAPI app. This project has its own local infra —
+`compose.yml` is a full 12-container stack (Postgres, OpenSearch +
+Dashboards, Ollama, Redis, Airflow, and all 6 Langfuse pieces:
+ClickHouse, langfuse-postgres/-redis/-minio/-web/-worker) — so nothing
+requires touching the course repo for everyday work, including Week 6.
+Airflow builds from `./airflow`, a local copy of the course's own
+Dockerfile; Langfuse's services are straight copies of the course's own
+service definitions. The sibling checkout
+`../production-agentic-rag-course` is needed only for the original
+notebooks and the course's finished reference `src/` implementation
+(for when the user wants to peek at one function). Never run this
+project's `docker compose up -d` and the course repo's at the same
+time; they claim the same host ports (5432, 5433, 6380, 8080, 9200,
+11434, ...).
+
+**Three real bugs were found and fixed while copying this infra in —
+don't "clean up" or revert these, they're deliberate:**
+1. `airflow/entrypoint.sh` additionally removes
+   `airflow-webserver-monitor.pid` (the course's own entrypoint only
+   clears `-webserver.pid`/`-scheduler.pid`, missing this one — it
+   survives container restarts on the persistent volume and makes the
+   webserver refuse to start with "already running under PID X" after
+   any unclean shutdown).
+2. `compose.yml`'s `langfuse-web` healthcheck uses `wget`, not `curl` —
+   the `langfuse/langfuse:3` image doesn't have `curl` installed (the
+   course's own compose.yml does, so its healthcheck silently always
+   fails too).
+3. `compose.yml`'s `langfuse-web` sets `HOSTNAME: "0.0.0.0"` explicitly
+   — Docker auto-sets `HOSTNAME` to the container ID, and this image's
+   Next.js standalone server binds to exactly that address instead of
+   all interfaces, breaking any in-container loopback request (the
+   healthcheck, or anything else hitting `localhost`/`127.0.0.1` from
+   inside the container) even though the published port still works
+   fine from outside.
 
 **Almost every function body in `src/` is `raise NotImplementedError`.**
 That is intentional, not incomplete work to finish. The whole point is
@@ -33,7 +57,7 @@ the user wrote) over writing the implementation for them.
 ```bash
 uv sync                                              # install deps
 cp .env.example .env                                 # then edit as needed
-docker compose up -d                                 # this project's own Postgres/OpenSearch/Ollama/Redis — see compose.yml
+docker compose up -d                                 # full local infra: Postgres/OpenSearch/Ollama/Redis/Airflow/Langfuse — see compose.yml (first run builds Airflow's image, several minutes)
 
 uv run uvicorn src.main:app --reload --port 8100      # run the app (8100, not 8000 — avoids colliding with the course's own containerized API)
 
@@ -80,3 +104,9 @@ week's TODOs are done, not a bug to fix.
 - Each script also does a best-effort `requests` call against the user's
   own running app (`http://localhost:{settings.app_port}`) for the
   relevant endpoint, skipping (not failing) if it isn't up.
+- **`src/services/exploration.py`** is a deliberate exception to the
+  "real production app" framing above — four throwaway stub functions
+  (pull an Ollama model, generate a test response, list Postgres tables,
+  check OpenSearch health) mirroring the course notebook's hands-on
+  Week 1 cells, called from the end of `week1_verify_infra.py`. Not the
+  polished client you'd build in later weeks; don't hold it to that bar.

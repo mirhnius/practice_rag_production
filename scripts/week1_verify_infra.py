@@ -86,14 +86,11 @@ def main() -> None:
     check_tcp_port("PostgreSQL", "localhost", 5432)
     check_http("OpenSearch", "http://localhost:9200/_cluster/health")
     check_http("Ollama", "http://localhost:11434/api/version")
-
-    print("\n-- Airflow (runs from the course repo, not this project's compose.yml) --")
     airflow_ok = check_http("Airflow", "http://localhost:8080/health")
     if not airflow_ok:
         print(
-            "      Not part of this project's own infra — start it with "
-            "`docker compose up -d` in ../production-agentic-rag-course "
-            "if you want to look at the real arxiv_paper_ingestion DAG."
+            "      Airflow's image takes a few minutes to build on the first "
+            "`docker compose up -d` — give it time, then re-run this script."
         )
 
     print("\n-- Your own app --")

@@ -21,17 +21,16 @@ debugging infrastructure and RAG logic at once.
 | **OpenSearch** | Search engine for BM25 + vectors (Week 3+) | Docker, port 9200 |
 | **Ollama** | Runs a local LLM (Week 5+) | Docker, port 11434 |
 | **Redis** | Response caching (Week 6+) | Docker, port 6379 |
-| **Airflow** *(course repo only)* | Optional workflow scheduler | Docker, port 8080 |
+| **Airflow** | Workflow scheduler (optional to use) | Docker, port 8080 |
 
 You don't build any of the Docker services — Postgres/OpenSearch/Ollama/
-Redis come from this project's own `docker compose up -d` (see
-`compose.yml` at the repo root). Airflow is real, live infrastructure in
-the actual course (it's what runs `arxiv_paper_ingestion`, the real DAG)
-— it's just not in *this project's* compose.yml, since it needs a
-custom-built image rather than an off-the-shelf one. Start it from
-`../production-agentic-rag-course` whenever you want to look at it; the
-Week 1 script below checks for it too, it just doesn't require it. What
-you *do* build here is the app that talks to all of these.
+Redis/Airflow all come from this project's own `docker compose up -d`
+(see `compose.yml` at the repo root; Airflow builds from `./airflow`, a
+local copy of the course's own Dockerfile, so the first run takes a few
+extra minutes). It's "optional to use" in the sense that nothing in this
+curriculum's `src/` requires you to author a DAG — `airflow/dags/`
+starts empty — but the real scheduler is right there if you ever want
+one. What you *do* build here is the app that talks to all of these.
 
 ## Files to implement
 
@@ -132,8 +131,10 @@ it's not hiding anything:
 3. `GET`s OpenSearch's `/_cluster/health` and Ollama's `/api/version` —
    if either doesn't respond, the corresponding Docker service isn't up
    yet.
-4. `GET`s Airflow's `/health` too — but this one's allowed to fail. It's
-   only there if you've separately started Airflow from the course repo.
+4. `GET`s Airflow's `/health` too. It's still allowed to fail here — the
+   first `docker compose up -d` takes a few extra minutes to build
+   Airflow's image, so it may not be up yet even though it's part of
+   this project now.
 5. `GET`s `http://localhost:8100/api/v1/health` — this is the one that
    depends on *your* code. It only succeeds once `health_check()` in
    `src/routers/health.py` actually returns something.

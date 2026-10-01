@@ -40,17 +40,15 @@ cp .env.example .env
 docker compose up -d
 ```
 
-That last command starts this project's own local infra (Postgres,
-OpenSearch, Ollama, Redis — see `compose.yml`) right here, so you never
-need to `cd` into the course repo for everyday Week 1-6 work. `.env`
-already points at `localhost` with matching ports. Airflow and Langfuse
-are still very much part of the real course (Airflow runs the actual
-`arxiv_paper_ingestion` DAG) — they're just not in *this project's own*
-compose.yml, because Airflow needs a custom-built image and Langfuse is
-a 6-container stack of its own (`compose.yml`'s comments explain both).
-Run them straight from `../production-agentic-rag-course` whenever you
-want to look at them; `scripts/week1_verify_infra.py` checks for Airflow
-too, it just doesn't require it.
+That last command starts this project's own local infra — Postgres,
+OpenSearch, Ollama, Redis, and Airflow, all in `compose.yml` right here
+— so you never need to `cd` into the course repo for everyday work.
+`.env` already points at `localhost` with matching ports. Airflow is
+built from a local copy of the course's own `airflow/Dockerfile` (in
+`./airflow`), so the first `docker compose up -d` takes a few extra
+minutes while it builds. Langfuse (Week 6, optional) is the one thing
+still left in the course repo — it's a 6-container stack of its own;
+`compose.yml`'s comments explain why and what to do instead.
 
 ## Working through it
 
@@ -70,6 +68,8 @@ too, it just doesn't require it.
 ## Layout
 
 ```
+compose.yml                  # local infra: Postgres/OpenSearch/Ollama/Redis/Airflow
+airflow/                     # Airflow's Dockerfile + entrypoint, copied from the course repo
 docs/                        # week1.md ... week7.md — read these first
 src/
 ├── config.py                 # Week 1 — settings from .env
