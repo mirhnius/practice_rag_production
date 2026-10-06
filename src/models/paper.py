@@ -18,17 +18,13 @@ class Paper(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     arxiv_id: Mapped[str] = mapped_column(String, unique=True, index=True)
-
-    # TODO: title: Mapped[str] = mapped_column(String)
-    # TODO: authors: Mapped[list[str]] = mapped_column(JSON)
-    # TODO: abstract: Mapped[str] = mapped_column(Text)
-    # TODO: categories: Mapped[list[str]] = mapped_column(JSON)
-    # TODO: published_date: Mapped[datetime] = mapped_column(DateTime)
-    # TODO: pdf_url: Mapped[str] = mapped_column(String)
-    # TODO: raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
-    #   (filled in once the PDF parser has run — None until then)
-
-    # TODO: created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
-    # TODO: updated_at: Mapped[datetime] = mapped_column(
-    #     DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    # )
+    title: Mapped[str] = mapped_column(String)
+    authors: Mapped[list[str]] = mapped_column(JSON)
+    abstract: Mapped[str] = mapped_column(Text)
+    categories: Mapped[list[str]] = mapped_column(JSON)
+    published_date: Mapped[datetime] = mapped_column(DateTime)
+    pdf_url: Mapped[str] = mapped_column(String)
+    raw_text: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

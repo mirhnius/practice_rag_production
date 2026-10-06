@@ -93,3 +93,146 @@ src/
 └── routers/                  # FastAPI endpoints, one set per week
 scripts/                     # Week 1-7 runnable scripts (the notebook replacement)
 ```
+
+## System Design
+
+Standalone diagrams:
+
+- [System Architecture](docs/system-architecture.md)
+- [Data Ingestion Design](docs/week2-ingestion-flow.md)
+- [RAG Query Design](docs/rag-query-flow.md)
+
+The system can be understood from several complementary design angles.
+
+### Layered View
+
+```mermaid
+flowchart TB
+  Client[API client] --> Routers[FastAPI routers]
+  Routers --> Services[Application services]
+  Services --> Repositories[Repositories]
+  Repositories --> Session[SQLAlchemy session]
+  Session --> Postgres[(PostgreSQL)]
+
+  Services --> Arxiv[arXiv API]
+  Services --> Docling[Docling PDF parser]
+  Services --> OpenSearch[(OpenSearch)]
+  Services --> Ollama[Ollama]
+  Services --> Redis[(Redis)]
+```
+
+- **Routers** receive HTTP requests and return validated responses.
+- **Services** coordinate workflows across external systems and storage.
+- **Repositories** contain database queries and persistence logic.
+- **Models** describe database tables; **schemas** describe validated data
+  entering or leaving the application.
+- **Clients** isolate communication with arXiv, OpenSearch, Ollama, and
+  other external services.
+
+### Data Flow View
+
+The ingestion path moves information from external sources into durable
+application data:
+
+```mermaid
+flowchart LR
+  Runner[Application workflow] --> Fetcher[Workflow orchestrator]
+  Fetcher --> ArxivClient[ArxivClient]
+  ArxivClient --> ExternalAPI[External content API]
+  ExternalAPI --> Metadata[Validated metadata]
+
+  Metadata --> Download[Download PDF]
+  Download --> Cache[(PDF cache)]
+  Cache --> Parser[Document parser]
+  Parser --> Parsed[Structured document]
+
+  Metadata --> Create[PaperCreate]
+  Parsed --> Create
+  Create --> Repository[PaperRepository]
+  Repository --> Database[(Database)]
+```
+
+The data changes shape as it moves through the system:
+
+```text
+external response
+  -> validated metadata
+  -> local document
+  -> parsed document
+  -> persistence schema
+  -> database row
+```
+
+The orchestrator coordinates the workflow, while each client, parser, and
+repository owns one type of work. A failure in one item should be isolated
+when the workflow processes a batch.
+
+### Persistence Boundary
+
+```mermaid
+sequenceDiagram
+  participant Service as Application service
+  participant Repo as PaperRepository
+  participant Session as SQLAlchemy session
+  participant DB as PostgreSQL
+
+  Service->>Repo: save validated data
+  Repo->>Session: find existing record
+  Session->>DB: SELECT
+  DB-->>Session: existing row or none
+  alt Record exists
+    Repo->>Session: update fields
+  else Record is new
+    Repo->>Session: add database model
+  end
+  Session->>DB: INSERT or UPDATE on commit
+  DB-->>Service: stored Paper
+```
+
+The session owns the transaction boundary. The repository owns the query,
+and the service decides when the operation should happen.
+
+### Query Flow
+
+The query path combines retrieval with response generation:
+
+```mermaid
+flowchart LR
+  User[User question] --> Router[API router]
+  Router --> Workflow[Query workflow]
+  Workflow --> Query[Query builder]
+  Query --> Keyword[Keyword search]
+  Query --> Vector[Vector search]
+  Keyword --> Search[(OpenSearch)]
+  Vector --> Search
+  Search --> Context[Relevant context]
+  User --> Prompt[Prompt builder]
+  Context --> Prompt
+  Prompt --> LLM[Ollama LLM]
+  LLM --> Answer[Response]
+```
+
+### Responsibility View
+
+```text
+External clients:
+  communicate with outside systems
+
+Application services:
+  coordinate workflows
+
+Parsers and transformers:
+  convert data between representations
+
+Repositories:
+  read and write durable data
+
+Schemas:
+  validate boundaries between layers
+
+Models:
+  represent persisted data
+
+Each layer depends on the layer below it through a small, explicit
+interface rather than reaching into unrelated implementation details.
+```

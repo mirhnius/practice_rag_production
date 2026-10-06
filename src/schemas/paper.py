@@ -19,20 +19,26 @@ from pydantic import BaseModel
 class ArxivPaperMetadata(BaseModel):
     """One entry parsed out of the arXiv Atom feed."""
 
-    # TODO: arxiv_id: str
-    # TODO: title: str
-    # TODO: authors: list[str]
-    # TODO: abstract: str
-    # TODO: categories: list[str]
-    # TODO: published_date: datetime
-    # TODO: pdf_url: str
+    arxiv_id:str
+    title:str
+    authors:list[str]
+    abstract:str
+    categories:list[str]
+    published_date:datetime
+    pdf_url:str
 
 
 class PaperCreate(BaseModel):
     """Input to PaperRepository.upsert()."""
 
-    # TODO: same fields as ArxivPaperMetadata, plus:
-    # raw_text: str | None = None
+    arxiv_id:str
+    title:str
+    authors:list[str]
+    abstract:str
+    categories:list[str]
+    published_date:datetime
+    pdf_url:str
+    raw_text: str | None = None
 
 
 class PaperOut(BaseModel):
@@ -40,11 +46,11 @@ class PaperOut(BaseModel):
 
     model_config = {"from_attributes": True}
 
-    # TODO: id: int
-    # TODO: arxiv_id: str
-    # TODO: title: str
-    # TODO: authors: list[str]
-    # TODO: abstract: str
-    # TODO: categories: list[str]
-    # TODO: published_date: datetime
-    # TODO: pdf_url: str
+    id:int
+    arxiv_id:str
+    title:str
+    authors:list[str]
+    abstract:str
+    categories:list[str]
+    published_date:datetime
+    pdf_url:str
