@@ -104,7 +104,7 @@ Standalone diagrams:
 
 The system can be understood from several complementary design angles.
 
-### Layered View
+### Layered Architecture
 
 ```mermaid
 flowchart TB
@@ -166,6 +166,34 @@ external response
 The orchestrator coordinates the workflow, while each client, parser, and
 repository owns one type of work. A failure in one item should be isolated
 when the workflow processes a batch.
+
+### One Paper's Lifecycle
+
+```mermaid
+sequenceDiagram
+  participant Source as External source
+  participant Client as External client
+  participant Parser as Document parser
+  participant Schema as Validation schema
+  participant Repo as Repository
+  participant DB as Database
+
+  Client->>Source: Request paper metadata
+  Source-->>Client: External response
+  Client->>Client: Convert response to metadata
+  Client->>Source: Request paper document
+  Source-->>Client: Document bytes
+  Client->>Parser: Parse local document
+  Parser-->>Client: Structured text
+  Client->>Schema: Build persistence data
+  Schema-->>Repo: Validated data
+  Repo->>DB: Insert or update record
+  DB-->>Repo: Stored record
+```
+
+The lifecycle shows the movement of one item. The layered view shows who
+owns each responsibility; this view shows the order in which the work
+happens.
 
 ### Persistence Boundary
 
