@@ -44,4 +44,32 @@ class MetadataFetcher:
         - return counters (this is exactly what
           scripts/week2_test_arxiv_pipeline.py prints)
         """
-        raise NotImplementedError
+     
+        papers = self.arxiv_client.fetch_papers(max_results=max_results)
+        paper_repo = PaperRepository(session)
+        counters = {
+            "papers_fetched": len(papers),
+            "pdfs_downloaded": 0,
+            "pdfs_parsed": 0,
+            "papers_stored": 0,
+            "errors": [],
+        }
+        for paper in papers:
+            try:
+                paper_create = PaperCreate(**paper.model_dump())
+                if process_pdfs:
+                    try:
+                        pdf_path = self.arxiv_client.download_pdf(paper)
+                        counters["pdfs_downloaded"] += 1
+                        pdf_parsed = self.pdf_parser.parse_pdf(pdf_path)
+                        if pdf_parsed:
+                            paper_create.raw_text = pdf_parsed.raw_text
+                            counters["pdfs_parsed"] += 1
+                    except Exception as exc:
+                        counters["errors"].append(f"{paper.arxiv_id} (PDF): {exc}")
+                paper_repo.upsert(paper_create)
+                counters["papers_stored"] += 1  
+            except Exception as exc:
+                counters["errors"].append(f"{paper.arxiv_id}: {exc}")
+        return counters
+              
