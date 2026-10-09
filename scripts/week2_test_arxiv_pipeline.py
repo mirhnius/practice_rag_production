@@ -23,7 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.config import get_settings  # noqa: E402
-from src.db.session import get_session  # noqa: E402
+from src.db.session import get_session, init_db  # noqa: E402
 from src.repositories.paper import PaperRepository  # noqa: E402
 from src.schemas.paper import PaperCreate  # noqa: E402
 from src.services.arxiv.client import ArxivClient  # noqa: E402
@@ -42,6 +42,13 @@ def main() -> None:
     )
     pdf_parser = PDFParserService()
 
+    print("=" * 60)
+    print("STEP 0 — make sure the papers table exists in Postgres")
+    print("=" * 60)
+    init_db()
+    print("Tables are ready (created if they were missing).")
+
+    print()
     print("=" * 60)
     print("STEP 1 — fetch 2 recent papers from arXiv")
     print("=" * 60)

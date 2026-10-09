@@ -110,3 +110,13 @@ week's TODOs are done, not a bug to fix.
   check OpenSearch health) mirroring the course notebook's hands-on
   Week 1 cells, called from the end of `week1_verify_infra.py`. Not the
   polished client you'd build in later weeks; don't hold it to that bar.
+- **Tables are created by `init_db()` in `src/db/session.py`**
+  (`Base.metadata.create_all`), called as Step 0 of
+  `scripts/week2_test_arxiv_pipeline.py` — there are no migrations
+  (Alembic is installed but unused), so `create_all` never alters an
+  existing table; a column change means dropping the table. The model
+  import lives *inside* `init_db()` on purpose: a top-level import is
+  circular, and without the import `create_all` silently creates nothing.
+  When the FastAPI app gets DB-backed routes, it needs to call `init_db()`
+  too (e.g. in a lifespan hook) — it doesn't yet, deliberately, so the
+  app still boots without Postgres.

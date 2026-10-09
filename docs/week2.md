@@ -69,6 +69,31 @@ will re-fetch papers you already have. Rather than crash on a duplicate
 exists, insert it if it doesn't" — look up by `arxiv_id` first, then
 branch.
 
+### Tables don't create themselves
+
+Writing `class Paper(Base)` only *describes* a table in Python. Postgres
+has no `papers` table until something sends it a `CREATE TABLE`.
+SQLAlchemy does that for you with `Base.metadata.create_all(bind=engine)`:
+it looks at every model registered on `Base` and creates the ones that
+don't exist yet, skipping any that do — so it's safe to run repeatedly.
+That's what `init_db()` in `src/db/session.py` does (it's provided for
+you), and the Week 2 script calls it as Step 0. Without it, every
+`upsert` fails with `relation "papers" does not exist`.
+
+Two things worth knowing:
+
+- **Registration happens on import.** `Paper` only joins `Base.metadata`
+  when `models/paper.py` is actually imported. If nothing imported it,
+  `create_all` creates zero tables and says nothing. That's why
+  `init_db()` imports the model *inside the function*: a top-level import
+  would be circular, because the model file imports `Base` from
+  `session.py`.
+- **`create_all` never changes an existing table.** If you add or rename a
+  column after the table exists, nothing happens — Postgres keeps the old
+  shape. For a learning project the simple fix is to drop the table
+  (`DROP TABLE papers;`) and run again. Real projects use a migration
+  tool (Alembic) for this.
+
 ## Files to implement, in order
 
 1. **`src/config.py`** — add `postgres_database_url`, `arxiv_base_url`,
@@ -78,7 +103,9 @@ branch.
    The pattern to know: `get_session()` is a *context manager*
    (`with get_session() as session:`) that commits if the `with` block
    finishes cleanly and rolls back if it raises — that's why the body is
-   a try/except/finally around a single `yield`.
+   a try/except/finally around a single `yield`. The file also has
+   `init_db()`, which is already written — see "Tables don't create
+   themselves" above.
 3. **`src/models/paper.py`** — the columns (see the TODO list in the
    file; nothing tricky, just SQLAlchemy `Mapped[...]` column
    declarations).
@@ -100,6 +127,9 @@ The script is a **plain, top-to-bottom sequence of steps** — no helper
 framework, nothing hidden. Each step is a clearly labeled block that
 calls straight into the file above it in the list, in order:
 
+0. Create the `papers` table if it's missing (`init_db()`). This runs
+   first so a missing table or an unreachable Postgres fails immediately,
+   before any slow network or PDF work.
 1. Build an `ArxivClient` from settings, call `fetch_papers(max_results=2)`.
 2. Download the PDF for the first paper (`download_pdf`).
 3. Parse it (`parse_pdf`).
@@ -115,6 +145,8 @@ either.
 
 ## Success criteria
 
+- [ ] The `papers` table exists — check with
+      `docker compose exec postgres psql -U rag_user -d rag_db -c '\dt papers'`
 - [ ] `fetch_papers()` returns real `ArxivPaperMetadata` objects
 - [ ] A PDF downloads and Docling parses it into sections
 - [ ] A paper round-trips through Postgres (`upsert` then `get_by_arxiv_id`)
@@ -129,6 +161,11 @@ either.
   not raise, so `MetadataFetcher` can skip that paper and continue.
 - **Forgetting the Atom namespace** when parsing XML — `entry` won't
   match anything; you need the full `{http://www.w3.org/2005/Atom}entry`.
+- **`relation "papers" does not exist`** — the table was never created.
+  Run the script (Step 0 calls `init_db()`), or call `init_db()` yourself.
+- **Changed a column but nothing changed in Postgres** — `create_all`
+  never alters an existing table. Drop it (`DROP TABLE papers;`) and
+  re-run so it's recreated with the new shape.
 
 ## If you want the original course material too
 
