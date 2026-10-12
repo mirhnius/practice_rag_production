@@ -17,16 +17,16 @@ router = APIRouter(prefix="/api/v1/papers", tags=["papers"])
 
 @router.get("", response_model=list[PaperOut])
 def list_papers(limit: int = 20, offset: int = 0) -> list[PaperOut]:
-    """TODO:
+    """Return a page of stored papers, `limit` at a time, skipping the first `offset`"""
     with get_session() as session:
         return PaperRepository(session).list_papers(limit, offset)
-    """
-    raise NotImplementedError
 
 
 @router.get("/{arxiv_id}", response_model=PaperOut)
 def get_paper(arxiv_id: str) -> PaperOut:
-    """TODO: look up by arxiv_id via the repository; if it's None, raise
-    HTTPException(status_code=404, detail="Paper not found").
-    """
-    raise NotImplementedError
+    """Return one paper by arXiv ID, or 404 if it isn't stored."""
+    with get_session() as session:
+        paper = PaperRepository(session).get_by_arxiv_id(arxiv_id)
+        if paper is None:
+            raise HTTPException(status_code=404, detail="Paper not found")
+        return paper

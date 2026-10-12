@@ -21,7 +21,7 @@ class Base(DeclarativeBase):
 
 engine = create_engine(get_settings().postgres_database_url)
 
-SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False)
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False)
 
 
 @contextmanager

@@ -12,15 +12,15 @@ happen to have both running at once.)
 from fastapi import FastAPI
 
 from src.config import get_settings
-from src.routers import health
+from src.routers import health, papers
 
 settings = get_settings()
 
 app = FastAPI(title="Practice RAG Production", debug=settings.debug)
 
 app.include_router(health.router)
+app.include_router(papers.router)
 
-# TODO (Week 2): app.include_router(papers.router)
 # TODO (Week 3): app.include_router(search.router)
 # TODO (Week 4): app.include_router(hybrid_search.router)
 # TODO (Week 5): app.include_router(ask.router)

@@ -21,7 +21,7 @@ class PaperRepository:
         """Insert a paper, or update it in place if arxiv_id already exists."""
         existing = self.get_by_arxiv_id(paper.arxiv_id)
         if existing:
-            for field, value in paper.model_dump().items():
+            for field, value in paper.model_dump(exclude_unset=True).items():
                 setattr(existing, field, value)
             self.session.flush()
             return existing
