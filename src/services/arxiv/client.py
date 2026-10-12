@@ -57,7 +57,7 @@ class ArxivClient:
         search_query = f"cat:{self.search_category}"
 
         if from_date and to_date:
-            search_query += f" AND submittedDate:[{from_date}TO{to_date}]"
+            search_query += f" AND submittedDate:[{from_date}0000 TO {to_date}2359]"
 
         params = {
             "search_query": search_query,
@@ -75,7 +75,7 @@ class ArxivClient:
                 time.sleep(2**attempt)
                 continue
 
-            if response.status_code == 503:
+            if response.status_code in (429, 503):
                 if attempt == MAX_RETRIES - 1:
                     response.raise_for_status()
                 time.sleep(2**attempt)
@@ -133,11 +133,25 @@ class ArxivClient:
         if target.exists():
             return target
 
-        self._respect_rate_limit()
-        response = requests.get(paper.pdf_url, stream=True, timeout=60)
-        response.raise_for_status()
+        partial = target.with_suffix(".pdf.part")
 
-        with open(target, "wb") as f:
-            for chunk in response.iter_content(chunk_size=8192):
-                f.write(chunk)
-        return target
+        try:
+            self._respect_rate_limit()
+
+            with requests.get(
+                paper.pdf_url,
+                stream=True,
+                timeout=60,
+            ) as response:
+                response.raise_for_status()
+
+                with partial.open("wb") as file:
+                    for chunk in response.iter_content(chunk_size=8192):
+                        if chunk:
+                            file.write(chunk)
+
+            partial.replace(target)
+            return target
+        except Exception:
+            partial.unlink(missing_ok=True)
+            raise

@@ -14,6 +14,7 @@ import logging
 from dataclasses import dataclass
 from pathlib import Path
 
+import pypdfium2 as pdfium
 from docling.document_converter import DocumentConverter
 from docling_core.types.doc import DocItemLabel
 
@@ -66,6 +67,17 @@ class PDFParserService:
               "Skipping PDF %s: file size exceeds %d MB",
               pdf_path,
               self.max_file_size_mb,
+            )
+            return None
+
+          with pdfium.PdfDocument(str(pdf_path)) as pdf:
+            page_count = len(pdf)
+          if page_count > self.max_pages:
+            logger.warning(
+              "Skipping PDF %s: %d pages exceeds the %d-page limit",
+              pdf_path,
+              page_count,
+              self.max_pages,
             )
             return None
 
