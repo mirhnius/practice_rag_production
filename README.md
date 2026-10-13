@@ -1,108 +1,54 @@
-# Practice RAG Production
+# arXiv Paper Curator — Production RAG System
 
-My own build-along of the **arXiv Paper Curator** course
-(`production-agentic-rag-course`), written as plain Python instead of
-Jupyter notebooks. Same architecture, same week-by-week progression — but
-every file here is a skeleton I fill in myself so I actually learn it,
-instead of running someone else's notebook cells.
+A production-style Retrieval-Augmented Generation (RAG) system for research
+papers. It ingests papers from arXiv, turns their PDFs into structured text,
+stores them in PostgreSQL, indexes them for keyword and semantic search, and
+answers research questions with a locally hosted LLM, citing the papers it
+used.
 
-## How this is organized
+## What It Supports
 
-- **`docs/`** — one guide per week (`week1.md` ... `week7.md`). This is
-  where the actual teaching lives: what the concept is and why it works
-  the way it does, then a file-by-file walkthrough of the approach for
-  everything you'll implement that week. Read the guide *before* opening
-  any code — the TODO comments in `src/` are short reminders, not the
-  explanation.
-- **`src/`** — the actual application, laid out the same way a real
-  production RAG service would be (routers / services / repositories /
-  models), growing by one or two modules each week. Every file starts
-  as a stub: docstring explaining *what* it's for and *why*, function/class
-  signatures already typed out, and `# TODO` comments instead of a
-  finished body.
-- **`scripts/`** — one plain script per week (`week1_verify_infra.py`,
-  `week2_test_arxiv_pipeline.py`, ...). These replace the course's
-  Jupyter notebooks: same step-by-step flow, printed section by section,
-  no helper framework of their own — every line is visible top to bottom,
-  the same way a notebook reads cell by cell. Each script calls straight
-  into the `src/` modules for that week, so it will raise
-  `NotImplementedError` — with a traceback pointing at the exact file and
-  line — until I've actually written the code. That's the point: it's my
-  checklist, not something to debug.
-- **`ROADMAP.md`** — the week-by-week index: which guide to read, which
-  files to implement, which script proves it works.
+- **Paper ingestion** — fetch the latest papers for an arXiv category
+  (default `cs.AI`), optionally within a date range, with rate limiting and
+  retries.
+- **PDF understanding** — convert PDFs into structured sections with
+  Docling; oversized or unparseable PDFs are skipped without blocking the
+  rest of a batch.
+- **Durable storage** — idempotent upserts into PostgreSQL, so re-running
+  ingestion never creates duplicates.
+- **Keyword search** — BM25 over title, abstract, and full text, with field
+  boosting, category filters, and highlighted matches.
+- **Semantic and hybrid search** — section-aware chunking, vector
+  embeddings, and Reciprocal Rank Fusion to combine keyword and vector
+  results.
+- **Grounded question answering** — retrieval-augmented answers from a local
+  LLM (Ollama) with source attribution, as standard or streaming responses.
+- **Production features** — Redis response caching, Langfuse tracing, and
+  health checks.
+- **Agentic retrieval** — a LangGraph workflow that screens questions,
+  grades retrieved documents, and rewrites weak queries.
+- **Telegram interface** — optionally ask questions from a phone.
 
-## Setup
+## How It Works
 
-```bash
-uv sync
-cp .env.example .env
-docker compose up -d
-```
+1. **Ingest** — `ArxivClient` queries the arXiv API (rate-limited to arXiv's
+   guideline of one request every 3 seconds, with retries) and downloads each
+   paper's PDF into a local cache.
+2. **Parse** — Docling reads the PDF and returns structured sections plus the
+   full text.
+3. **Store** — metadata and parsed text are validated and upserted into
+   PostgreSQL.
+4. **Index** — papers, and their text chunks with embeddings, are indexed in
+   OpenSearch.
+5. **Retrieve** — a question is matched with BM25 keyword search, vector
+   search, or both fused together.
+6. **Generate** — the retrieved context is assembled into a prompt and
+   answered by the local LLM, with caching and tracing around this path.
 
-That last command starts this project's own local infra — Postgres,
-OpenSearch, Ollama, Redis, and Airflow, all in `compose.yml` right here
-— so you never need to `cd` into the course repo for everyday work.
-`.env` already points at `localhost` with matching ports. Airflow is
-built from a local copy of the course's own `airflow/Dockerfile` (in
-`./airflow`), so the first `docker compose up -d` takes a few extra
-minutes while it builds. Langfuse (Week 6, optional) is the one thing
-still left in the course repo — it's a 6-container stack of its own;
-`compose.yml`'s comments explain why and what to do instead.
+The diagrams below show the layers, the data flow, and how a single paper
+moves through the system.
 
-## Working through it
-
-1. Open [ROADMAP.md](ROADMAP.md) and pick the next unchecked week.
-2. Read that week's guide in `docs/` — the concept, then the plan for
-   every file you're about to touch.
-3. Implement the `# TODO`s in the files it lists.
-4. Run that week's script in `scripts/`. When it runs to the end without
-   a `NotImplementedError` traceback, move on.
-5. If you get properly stuck on a specific function, the course's own
-   `README.md`/notebook for that week (linked at the bottom of each
-   guide) has more context, and the finished reference implementation is
-   sitting right next to this repo at
-   `../production-agentic-rag-course/src/...` — try for real first, then
-   peek only at the one function you're stuck on.
-
-## Layout
-
-```
-compose.yml                  # local infra: Postgres/OpenSearch/Ollama/Redis/Airflow
-airflow/                     # Airflow's Dockerfile + entrypoint, copied from the course repo
-docs/                        # week1.md ... week7.md — read these first
-src/
-├── config.py                 # Week 1 — settings from .env
-├── main.py                   # Week 1 — FastAPI app, wires up routers
-├── db/session.py              # Week 2 — SQLAlchemy engine/session
-├── models/paper.py             # Week 2 — Paper ORM model
-├── repositories/paper.py       # Week 2 — Paper CRUD / upsert
-├── schemas/                  # Pydantic request/response/data models
-├── services/
-│   ├── arxiv/client.py         # Week 2 — rate-limited arXiv API client
-│   ├── pdf_parser/parser.py    # Week 2 — Docling PDF parsing
-│   ├── metadata_fetcher.py     # Week 2 — orchestrates the ingestion pipeline
-│   ├── opensearch/            # Week 3 — index config, query builder, client
-│   ├── indexing/               # Week 4 — chunking + indexing pipeline
-│   ├── embeddings/jina_client.py  # Week 4 — Jina embeddings client
-│   ├── ollama/                # Week 5 — local LLM client + prompts
-│   ├── cache/redis_cache.py    # Week 6 — response caching
-│   ├── langfuse_tracer.py      # Week 6 — pipeline tracing
-│   ├── agents/                # Week 7 — LangGraph agentic RAG
-│   └── telegram_bot.py         # Week 7 — Telegram bot integration
-└── routers/                  # FastAPI endpoints, one set per week
-scripts/                     # Week 1-7 runnable scripts (the notebook replacement)
-```
-
-## System Design
-
-Standalone diagrams:
-
-- [System Architecture](docs/system-architecture.md)
-- [Data Ingestion Design](docs/week2-ingestion-flow.md)
-- [RAG Query Design](docs/rag-query-flow.md)
-
-The system can be understood from several complementary design angles.
+## Architecture and Design
 
 ### Layered Architecture
 
@@ -167,6 +113,26 @@ The orchestrator coordinates the workflow, while each client, parser, and
 repository owns one type of work. A failure in one item should be isolated
 when the workflow processes a batch.
 
+### Query Flow
+
+The query path combines retrieval with response generation:
+
+```mermaid
+flowchart LR
+  User[User question] --> Router[API router]
+  Router --> Workflow[Query workflow]
+  Workflow --> Query[Query builder]
+  Query --> Keyword[Keyword search]
+  Query --> Vector[Vector search]
+  Keyword --> Search[(OpenSearch)]
+  Vector --> Search
+  Search --> Context[Relevant context]
+  User --> Prompt[Prompt builder]
+  Context --> Prompt
+  Prompt --> LLM[Ollama LLM]
+  LLM --> Answer[Response]
+```
+
 ### One Paper's Lifecycle
 
 ```mermaid
@@ -220,26 +186,6 @@ sequenceDiagram
 The session owns the transaction boundary. The repository owns the query,
 and the service decides when the operation should happen.
 
-### Query Flow
-
-The query path combines retrieval with response generation:
-
-```mermaid
-flowchart LR
-  User[User question] --> Router[API router]
-  Router --> Workflow[Query workflow]
-  Workflow --> Query[Query builder]
-  Query --> Keyword[Keyword search]
-  Query --> Vector[Vector search]
-  Keyword --> Search[(OpenSearch)]
-  Vector --> Search
-  Search --> Context[Relevant context]
-  User --> Prompt[Prompt builder]
-  Context --> Prompt
-  Prompt --> LLM[Ollama LLM]
-  LLM --> Answer[Response]
-```
-
 ### Responsibility View
 
 ```text
@@ -264,3 +210,88 @@ Models:
 Each layer depends on the layer below it through a small, explicit
 interface rather than reaching into unrelated implementation details.
 ```
+
+## Tech Stack
+
+| Area | Technology |
+|---|---|
+| API | Python 3.12, FastAPI, Pydantic |
+| Storage | PostgreSQL 16, SQLAlchemy |
+| Search | OpenSearch 2.19 (BM25 + k-NN vectors) |
+| Document parsing | Docling |
+| Embeddings | Jina AI |
+| LLM | Ollama (local models) |
+| Caching & observability | Redis, Langfuse |
+| Agents | LangGraph |
+| Scheduling | Apache Airflow 2.10 |
+| Tooling | Docker Compose, uv |
+
+## Getting Started
+
+Requirements: Python 3.12, [uv](https://docs.astral.sh/uv/), and Docker Desktop.
+
+```bash
+uv sync
+cp .env.example .env
+docker compose up -d      # Postgres, OpenSearch, Ollama, Redis, Airflow, Langfuse
+uv run uvicorn src.main:app --reload --port 8100
+```
+
+The API docs are then available at <http://localhost:8100/docs>. The first
+`docker compose up -d` takes a few extra minutes because it builds the Airflow
+image. `.env.example` already points at the local services; `JINA_API_KEY` is
+needed for embeddings, and the Langfuse and Telegram keys are optional.
+
+`scripts/` contains an end-to-end check for each stage of the system, for
+example:
+
+```bash
+uv run python scripts/week1_verify_infra.py         # services reachable
+uv run python scripts/week2_test_arxiv_pipeline.py  # arXiv -> PDF -> PostgreSQL
+```
+
+## Project Structure
+
+```
+compose.yml                    # local infrastructure (Docker Compose)
+airflow/                       # Airflow image: Dockerfile and entrypoint
+docs/                          # design notes
+scripts/                       # end-to-end check for each stage
+src/
+├── main.py                    # FastAPI application entrypoint
+├── config.py                  # typed settings loaded from .env
+├── routers/                   # HTTP endpoints
+├── services/
+│   ├── arxiv/                 # rate-limited arXiv API client
+│   ├── pdf_parser/            # Docling PDF parsing
+│   ├── metadata_fetcher.py    # ingestion orchestrator
+│   ├── opensearch/            # index mappings, query builders, client
+│   ├── indexing/              # chunking and indexing pipeline
+│   ├── embeddings/            # Jina embeddings client
+│   ├── ollama/                # local LLM client and prompts
+│   ├── cache/                 # Redis response cache
+│   ├── agents/                # LangGraph agentic RAG workflow
+│   ├── langfuse_tracer.py     # pipeline tracing
+│   └── telegram_bot.py        # Telegram bot integration
+├── repositories/              # database access
+├── models/                    # SQLAlchemy models
+├── schemas/                   # Pydantic schemas
+└── db/                        # engine, sessions, table creation
+```
+
+## Project Status
+
+- **Implemented:** local infrastructure, FastAPI app and configuration, the
+  ingestion pipeline (arXiv → Docling → PostgreSQL), the papers API, and the
+  OpenSearch index mappings and BM25 query builders.
+- **In development:** the OpenSearch client and keyword search endpoint.
+- **Next:** chunking and embeddings, hybrid search, RAG answers, caching and
+  tracing, and the agentic workflow.
+
+## Acknowledgements
+
+This project follows the architecture of the **arXiv Paper Curator** from the
+[Production Agentic RAG course](https://github.com/jamwithai/production-agentic-rag-course)
+by Jam With AI, created by Shirin Khosravi Jam and Shantanu Ladhwe and released
+under the MIT License. The local infrastructure setup (the Docker Compose
+service definitions and the Airflow image) is adapted from that project.

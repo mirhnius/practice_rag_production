@@ -1,7 +1,7 @@
 [project]
 name = "practice-rag-production"
 version = "0.1.0"
-description = "My own from-scratch build of a production RAG system, following the arXiv Paper Curator course week by week — plain Python, no notebooks."
+description = "Production-style RAG system for arXiv research papers: ingestion, keyword and hybrid search, and grounded answers with a local LLM."
 requires-python = ">=3.12,<3.13"
 dependencies = [
     # --- Week 1: API + config ---
